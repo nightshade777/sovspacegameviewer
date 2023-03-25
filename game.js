@@ -2,14 +2,37 @@
 //FOR GAVIN 11:25 PM
 //global vars
 
-let maxX_true = 0; // global var to be pulled from coordinates from eos table
-let maxY_true = 0;
-let minX_true = 0;
-let minY_true = 0;
+let minX_true = Number.MAX_SAFE_INTEGER;
+let maxX_true = -Infinity;
+let minY_true = Number.MAX_SAFE_INTEGER;
+let maxY_true = -Infinity;
 
-//let clicked_tile = 500000500000;
-areaInfo();
 
+//these are intended to store the area arrays into local arrays so we can do long for loops without calling external API
+let areaIDs = []; 
+let areaID;
+let tileIDs = [];
+let tileID;
+let nftIDs = [];
+let nftID;
+
+
+let i_g = 0;
+let chunksize = 1000;
+let surfacewidth = 1000000;
+
+
+
+let layer;
+let camera;
+let tileWidth = 300;
+let tileHeight = 140;
+let offsetX = tileWidth / 2;
+let offsetY = tileHeight / 2;
+let dragging = false;
+let dragStart = new Phaser.Math.Vector2();
+let pinchActive = false;
+let initialPinchDistance;
 
 
 
@@ -32,21 +55,42 @@ const config = {
           batchSize: 4000 // Increase the batchSize
       }
 
-  };
-  const game = new Phaser.Game(config);
- 
+};
 
-  let layer;
-  let camera;
-  let tileWidth = 300;
-  let tileHeight = 140;
-  let offsetX = tileWidth / 2;
-  let offsetY = tileHeight / 2;
-  let dragging = false;
-  let dragStart = new Phaser.Math.Vector2();
-  let pinchActive = false;
-  let initialPinchDistance;
+loadall() // preload all arrays locally first before creating game
+console.log('code passed the loadall()');
 
+
+
+/**
+
+console.log('Starting...');
+
+function delayedAreaInfo(count) {
+    if (count === 0) {
+        // Additional code to execute after all wait times are finished
+        console.log('Executing additional code...');
+        const game = new Phaser.Game(config);
+        // Your additional code here
+        return;
+    }
+
+    setTimeout(() => {
+        areaInfo(chunksize);
+
+        if (count === 8) {
+            console.log('...1 second has passed.');
+        }
+
+        delayedAreaInfo(count - 1);
+    }, 1000);
+}
+
+delayedAreaInfo(9);
+
+console.log('Continuing...');
+  
+  **/
 function preload() {
 
       //load all images here
@@ -116,7 +160,7 @@ function create() {
 
             //let tileImage = 'tile30';
 
-            let tile_Num = getTileData(x_true, y_true);    //convert the x and y coordinates and find corresponding tile on the table
+            let tile_Num = getTileData(x_true, y_true);    //convert the x and y coordinates and find corresponding tile on the table,USES LOCAL ARRAY
             //let tile_Num = getTileData(499990, 500012);
             
 
@@ -138,10 +182,14 @@ function create() {
             //updateHitAreaPosition(hitArea, tileX + 2 * tileWidth / 2, tileY + 2 * tileHeight / 2); // Update hitArea coordinates with the current tile position and the desired offset
 
             //create tiles
-            const tile = this.add.image(tileX, tileY, tileImage).setInteractive(hitArea, Phaser.Geom.Polygon.Contains)
-                .setData({ name: `mapTile${tileCounter}`, x_true, y_true });
+           //if (tile_Num >4) {
 
-            layer.add(tile);
+                const tile = this.add.image(tileX, tileY, tileImage).setInteractive(hitArea, Phaser.Geom.Polygon.Contains)
+                    .setData({ name: `mapTile${tileCounter}`, x_true, y_true });
+                layer.add(tile);
+            //}
+
+            
             tileCounter++;
         }
     }  // drawing the map and setting the hitzones to be interactive and display coordinates in the console upon clicking
@@ -222,18 +270,19 @@ function updateHitAreaPosition(hitArea, offsetX, offsetY) {
 
 
 function getTileData(x, y) {
-    let id = parseInt(x.toString() + y.toString());
+    let id = parseInt(y.toString() + x.toString() );
     let tileNumber = null;
-    let l = area.rows.length;
+    let l = nftIDs.length;
     
 
     for (let i = 0; i < l; i++) {
-        if (i > 7000) {
+        if (i > 10000) {
             console.log('code got here :(', tileNumber); //correct
             break;
         }
-        if (parseInt(area.rows[i].id) === id) {
-            tileNumber = area.rows[i].tile;
+        if (parseInt(areaIDs[i]) === id) {
+            tileNumber = tileIDs[i];
+            console.log('tileID[i] element :)', nftIDs[i]); //correct
             console.log('coordinate located :)', tileNumber); //correct
             return tileNumber;
         }
@@ -314,34 +363,63 @@ function callback_area(value) {
     if (value == undefined) return;
     if (value.rows.length == 0) return;
     area = value; //global var getting set here
-    let areaIDs = [];
-    let areaID;
-   //let tileIDs = [];
+   // let areaIDs = [];
+    //let areaID;
+    //let tileIDs = [];
     //let tileID;
     //let nftIDs = [];
     //let nftID;
-    let l = area.rows.length;
-    for (let i = 0; i < l; i++) {
+
+    
+    
+   /** for (let i = 0; i < l; i++) {
         areaID = area.rows[i].id; //"'.id' can be replaced with any of the table parameters
         areaIDs.push(areaID);
         
-        
-       
-        //tileID = area.rows[i].tile + "<br>";
-        //tileIDs.push(tileID);
-        //nftID = area.rows[i].asset_id + "<br>";
-        //nftIDs.push(nftID);
+      
     }
+    **/
+    
+
+    
+   // let l = area.rows.length;
+
+    for (i_g; i_g < (chunksize ); i_g++) {
+
+        console.log('ig: ', i_g);
+        const y = parseInt(area.rows[i_g].id / 1000000);
+        console.log('Y: ', y);
+        const x = parseInt(area.rows[i_g].id) - (y * 1000000);
+        console.log('X: ', x);
+
+        areaID = area.rows[i_g].id; 
+        areaIDs.push(areaID);
+
+        tileID = area.rows[i_g].tile
+        tileIDs.push(tileID);
+
+        nftID = area.rows[i_g].asset_id
+        nftIDs.push(nftID);
+
+        minY_true = Math.min(minY_true, y);
+        maxY_true = Math.max(maxY_true, y);
+        minX_true = Math.min(minX_true, x);
+        maxX_true = Math.max(maxX_true, x);
+    }
+
+
 
    // let coordinateArray = areaIDs;
     //let tileArray = areaIDs;
     
     //let nftArray = nftIDs;
 
-    maxX_true = findMaxX(areaIDs);  //global var getting set here
-    maxY_true = findMaxY(areaIDs); //global var getting set here
-    minX_true = findMinX(areaIDs);  //global var getting set here
-    minY_true = findMinY(areaIDs);  //global var getting set here
+    
+
+    //maxX_true = findMaxX(areaIDs);  //global var getting set here
+    //maxY_true = findMaxY(areaIDs); //global var getting set here
+   // minX_true = findMinX(areaIDs);  //global var getting set here
+    //minY_true = findMinY(areaIDs);  //global var getting set here
 
 
     console.log('maxX=', maxX_true);
@@ -355,8 +433,10 @@ function callback_area(value) {
     //document.getElementById('nftArray').innerHTML = nftIDs;
 } // callback_area
 
-function areaInfo() {
-    getdata(callback_area, "sovspacegame", "sovspacegame", "area", global_account, 2, "name", 10000); //get entire table
+//ORIGINAL GETDATA CALL ----------------------------------------------------------------------------------------
+
+function areaInfo(rowcount) {
+    getdata(callback_area, "sovspacegame", "sovspacegame", "area", global_account, 2, "name", rowcount); //get entire table
 } // areaInfo
 
 
@@ -365,57 +445,175 @@ function areaInfo() {
 
 // math functions---------------------------------------------------------------------------------------------------------------------------------------
 
-function findMaxX(areaIDs) {
-    let maxX = -Infinity;
+
+/**
+function updateMinMaxCoordinates(areaIDs) {
+    minX_true = Number.MAX_SAFE_INTEGER;
+    maxX_true = -Infinity;
+    minY_true = Number.MAX_SAFE_INTEGER;
+    maxY_true = -Infinity;
 
     for (let i = 0; i < areaIDs.length; i++) {
-        const x = parseInt(areaIDs[i].substring(0, 6), 10);
-        maxX = Math.max(maxX, x);
+        const y = parseInt(areaIDs[i].substring(0, 6), 10);
+        const x = parseInt(areaIDs[i].substring(6), 10);
+
+        minY_true = Math.min(minY_true, y);
+        maxY_true = Math.max(maxY_true, y);
+        minX_true = Math.min(minX_true, x);
+        maxX_true = Math.max(maxX_true, x);
     }
-
-    return maxX;
 }
-function findMinX(areaIDs) {
-    let minX = Number.MAX_SAFE_INTEGER;
-    for (let i = 0; i < areaIDs.length; i++) {
-        const x = parseInt(areaIDs[i].substring(0, 6));
-        if (x < minX) {
-            minX = x;
+**/
+//  SVEN'S ASYNC CODE----------------------------------------------------
+async function loadall() {
+    //alert("load");
+
+
+    var lastid = "";
+    url = "https://eos.greymass.com/v1/chain/get_table_rows";
+
+    FINISH = 0;
+    loadcnt = 0;
+
+    while (FINISH == 0) {
+
+        limit = 1000;
+        jsonparam = '{"table":"area","scope":"sovspacegame","code":"sovspacegame","lower_bound": "' + lastid + '","limit":' + limit + ',"json":"true"}';
+        retjson = readurl_simple(url, jsonparam);
+        rows = JSON.parse(retjson);
+        size = rows.rows.length;
+        console.log("size: " + size);
+
+        for (i = 0; i < size; i++) {
+            coor = rows.rows[i].id;
+            tile = rows.rows[i].tile;
+
+            areaID = rows.rows[i].id;
+            areaIDs.push(areaID);
+
+            tileID = rows.rows[i].tile
+            tileIDs.push(tileID);
+
+            nftID = rows.rows[i].asset_id
+            nftIDs.push(nftID);
+
+            console.log('i: ', i);
+            const y = parseInt(rows.rows[i].id / 1000000);
+            console.log('Y: ', y);
+            const x = parseInt(rows.rows[i].id) - (y * 1000000);
+            console.log('X: ', x);
+
+            minY_true = Math.min(minY_true, y);
+            maxY_true = Math.max(maxY_true, y);
+            minX_true = Math.min(minX_true, x);
+            maxX_true = Math.max(maxX_true, x);
+
+            i_g++;
+
+
+
+            console.log("areaIDs[i_g]: " + areaIDs[i_g] + " areaIDs[i_g]:" + tileIDs[i_g]);
+
+            //thex3 = thex2 +200  - 500000;
+            //they3 = they2 +100  - 500000;
+
+            //if (tile == 1) setpixel (thex3,they3, 200,200,255);
+            //if (tile == 2) setpixel (thex3,they3, 200,255,255);
+            //if (tile == 3) setpixel (thex3,they3, 255,200,255);
+            //if (tile == 4) setpixel (thex3,they3, 200,255,200);
+
+        } // for i...
+
+        lastid = rows.next_key;
+        await delay(2000);
+        if (rows.more != 1) {
+            FINISH = 1;
+            const game = new Phaser.Game(config);
         }
-    }
-    return minX;
+        loadcnt++;
+        console.log("L:" + loadcnt + " lastid:" + lastid + " ");
+
+    } // while 
+
+
+
+    console.log("FIN<br>");
+} // loadall
+
+
+
+
+function delay(time) {
+    return new Promise(resolve => setTimeout(resolve, time));
 }
 
-function findMaxY(areaIDs) {
-    let maxY = -Infinity;
 
-    for (let i = 0; i < areaIDs.length; i++) {
-        const y = parseInt(areaIDs[i].substring(6), 10);
-        maxY = Math.max(maxY, y);
+function readurl_simple(url, jsonparam) {
+    try {
+        var xhr = new XMLHttpRequest();
+        var fd = new FormData();
+        xhr.open('POST', url, false);
+
+        var data2 = jsonparam;
+
+        xhr.send(data2);
+
+        var response = xhr.responseText;
+
+        return (response);
+    } catch (e) {
+        console.log("Connection failed, grabbing local");
+        return '[]';
     }
+} // readurl()
 
-    return maxY;
-}
 
-function findMinY(areaIDs) {
-    let minY = Number.MAX_SAFE_INTEGER;
-    for (let i = 0; i < areaIDs.length; i++) {
-        const y = parseInt(areaIDs[i].substring(6));
-        if (y < minY) {
-            minY = y;
+//
+// getdata()
+//
+function getdata(callback, _code, _scope, _table, _lower, _index, _key_type, _limit) {
+
+
+    var rows = null;
+
+    //     var url = "https://jungle3.greymass.com/v1/chain/get_table_rows";
+    // var url = "https://eos.greymass.com/v1/chain/get_table_rows";
+    //     var url = "https://eos.api.eosnation.io/v1/chain/get_table_rows";
+
+    var url = "https://" + thenode + "/v1/chain/get_table_rows";
+
+    var xhr = new XMLHttpRequest();
+
+    //var params = JSON.stringify(  {"code":"sovorderbook","scope":"sovorderbook","table":"token", "lower_bound":"12" ,  "json":true } );
+    //var params = JSON.stringify(  {"code":"sovorderbook","scope":"sovorderbook","table":"asks", "lower_bound":"10", "index_position":2 , "key_type": "i64",  "json":true } );
+    //var params = JSON.stringify(  {"code":_code,"scope":_scope,"table":_table, "lower_bound":_lower, "index_position":2 , "key_type": "i64",  "json":true } );
+    var params = JSON.stringify({ "code": _code, "scope": _scope, "table": _table, "lower_bound": _lower, "index_position": _index, "key_type": _key_type, "limit": _limit, "json": true });
+
+    xhr.open("POST", url);
+
+    //xhr.setRequestHeader("Content-length", params.length);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+
+
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            //      console.log("hic--2-");
+            //    console.log(xhr.status);
+            //   console.log(xhr.responseText);
+            json = xhr.responseText;
+
+            const rows = JSON.parse(json);
+
+            callback(rows);
+            //      document.getElementById('backdata').innerHTML = "XXX:"+xhr.responseText+"AA";
         }
-    }
-    return minY;
-}
+    };
+
+    //var mydata = {"code":"sovorderbook","scope":"sovorderbook","table":"token", "lower_bound":"10" ,  "json":true };
+
+    xhr.send(params);
 
 
-// Function to get the tile number from the EOSIO chain
-function getTileNumberFromChain(x, y) {
-    // Your code to retrieve the tile number from the EOSIO chain goes here
-    // ...
-
-    // For this example, let's assume that the tile number is 0
-    const tileNumber = 0;
-
-    return tileNumber;
-}
+    // console.log("back");
+} // getdata
